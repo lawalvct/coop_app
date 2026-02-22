@@ -12,14 +12,28 @@
 1. [Overview](#overview)
 2. [Getting Started (Expo + Redux)](#getting-started-expo--redux)
 3. [Authentication Flow](#authentication-flow)
-4. [API Endpoints](#api-endpoints)
+4. [API Endpoints – Auth](#api-endpoints)
     - [Auth – Public](#auth--public)
     - [Auth – Protected](#auth--protected)
     - [Lookup Data](#lookup-data)
 5. [Error Handling](#error-handling)
-6. [Available Modules (Upcoming Endpoints)](#available-modules-upcoming-endpoints)
-7. [React Native Integration Guide (Redux)](#react-native-integration-guide-redux)
-8. [Redux Cheat Sheet for Interviews](#redux-cheat-sheet-for-interviews)
+6. [API Endpoints – Member](#api-endpoints--member)
+    - [Dashboard](#member--dashboard)
+    - [Savings](#member--savings)
+    - [Savings Settings](#member--savings-settings)
+    - [Shares](#member--shares)
+    - [Loans](#member--loans)
+    - [Guarantor Requests](#member--guarantor-requests)
+    - [Withdrawals](#member--withdrawals)
+    - [Transactions / Passbook](#member--transactions--passbook)
+    - [Commodities](#member--commodities)
+    - [Notifications](#member--notifications)
+    - [Financial Summary](#member--financial-summary)
+    - [Profile](#member--profile)
+    - [Resources](#member--resources)
+7. [Available Modules – Admin (Upcoming)](#available-modules--admin-upcoming)
+8. [React Native Integration Guide (Redux)](#react-native-integration-guide-redux)
+9. [Redux Cheat Sheet for Interviews](#redux-cheat-sheet-for-interviews)
 
 ---
 
@@ -147,6 +161,16 @@ import {
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import authReducer from "./slices/authSlice";
 import lookupReducer from "./slices/lookupSlice";
+// Phase 2 – Member slices (see "Member Redux Slices" section below for full code)
+import dashboardReducer from "./slices/dashboardSlice";
+import savingsReducer from "./slices/savingsSlice";
+import sharesReducer from "./slices/sharesSlice";
+import loansReducer from "./slices/loansSlice";
+import withdrawalsReducer from "./slices/withdrawalsSlice";
+import transactionsReducer from "./slices/transactionsSlice";
+import commoditiesReducer from "./slices/commoditiesSlice";
+import notificationsReducer from "./slices/notificationsSlice";
+import financialReducer from "./slices/financialSlice";
 
 const persistConfig = {
     key: "root",
@@ -157,6 +181,15 @@ const persistConfig = {
 const rootReducer = combineReducers({
     auth: authReducer,
     lookup: lookupReducer,
+    dashboard: dashboardReducer,
+    savings: savingsReducer,
+    shares: sharesReducer,
+    loans: loansReducer,
+    withdrawals: withdrawalsReducer,
+    transactions: transactionsReducer,
+    commodities: commoditiesReducer,
+    notifications: notificationsReducer,
+    financial: financialReducer,
 });
 
 const persistedReducer = persistReducer(persistConfig, rootReducer);
@@ -949,76 +982,916 @@ useEffect(() => {
 
 ---
 
-## Available Modules (Upcoming Endpoints)
+## API Endpoints – Member
 
-Based on the existing web application, the following modules will be API-ified in subsequent releases. The route structure is already prepared in `routes/api.php`.
+All member endpoints require authentication (`Bearer token`) and are prefixed with `/api/v1/member`.
 
-### Member Endpoints (`/api/v1/member/...`)
+> **Base:** `https://your-domain.com/api/v1/member`
 
-| Module                | Planned Endpoints                         | Description                                                               |
-| --------------------- | ----------------------------------------- | ------------------------------------------------------------------------- |
-| **Dashboard**         | `GET /member/dashboard`                   | Summary stats: savings balance, shares, active loans, recent transactions |
-| **Savings**           | `GET /member/savings`                     | List member's savings records                                             |
-|                       | `GET /member/savings/monthly-summary`     | Monthly savings breakdown                                                 |
-|                       | `GET /member/savings/history`             | Full savings history                                                      |
-| **Savings Settings**  | `GET /member/savings-settings`            | View auto-deduction settings                                              |
-|                       | `POST /member/savings-settings`           | Update savings preferences                                                |
-| **Withdrawals**       | `GET /member/withdrawals`                 | List withdrawal requests                                                  |
-|                       | `POST /member/withdrawals`                | Request a new withdrawal                                                  |
-| **Shares**            | `GET /member/shares`                      | List share holdings                                                       |
-|                       | `POST /member/shares`                     | Purchase new shares                                                       |
-| **Loans**             | `GET /member/loans`                       | List loans                                                                |
-|                       | `POST /member/loans`                      | Apply for a loan                                                          |
-|                       | `GET /member/loans/{id}`                  | Loan details + repayment schedule                                         |
-| **Passbook**          | `GET /member/transactions`                | Transaction list (searchable, filterable)                                 |
-|                       | `GET /member/transactions/{id}`           | Transaction details                                                       |
-| **Commodities**       | `GET /member/commodities`                 | Browse available commodities                                              |
-|                       | `POST /member/commodities/{id}/subscribe` | Subscribe to commodity                                                    |
-|                       | `GET /member/commodity-subscriptions`     | My subscriptions                                                          |
-| **Guarantor**         | `GET /member/guarantor-requests`          | Pending guarantor requests                                                |
-|                       | `POST /member/guarantor/{loanId}/respond` | Accept/reject guarantor request                                           |
-| **Notifications**     | `GET /member/notifications`               | List notifications                                                        |
-|                       | `POST /member/notifications/mark-read`    | Mark all as read                                                          |
-| **Profile**           | `PUT /member/profile`                     | Request profile update                                                    |
-| **Documents**         | `GET /member/documents/pdf`               | Download membership PDF                                                   |
-| **Financial Summary** | `GET /member/financial-summary`           | Overall financial overview                                                |
+---
+
+### Member – Dashboard
+
+#### `GET /member/dashboard`
+
+Returns the member's financial overview for the home screen.
+
+**Response:**
+
+```json
+{
+    "success": true,
+    "data": {
+        "savings_balance": 125000.0,
+        "total_savings": 150000.0,
+        "total_withdrawals": 25000.0,
+        "monthly_contribution": 5000.0,
+        "share_capital": 10000.0,
+        "active_loans_count": 1,
+        "total_loan_balance": 45000.0,
+        "pending_guarantor_count": 2,
+        "unread_notifications": 3,
+        "recent_transactions": [
+            {
+                "id": 45,
+                "type": "Monthly Savings",
+                "amount": 5000.0,
+                "month": "February",
+                "year": 2026,
+                "status": "completed",
+                "created_at": "2026-02-15T10:30:00+01:00"
+            }
+        ]
+    }
+}
+```
+
+**Mobile screen mapping:** `DashboardScreen.js`
+
+| Card               | Data key                  |
+| ------------------ | ------------------------- |
+| Total Savings      | `savings_balance`         |
+| Monthly Contrib.   | `monthly_contribution`    |
+| Share Capital      | `share_capital`           |
+| Active Loans       | `active_loans_count`      |
+| Outstanding Loan   | `total_loan_balance`      |
+| Guarantor Badge    | `pending_guarantor_count` |
+| Notification Badge | `unread_notifications`    |
+| Recent list        | `recent_transactions[]`   |
+
+---
+
+### Member – Savings
+
+#### `GET /member/savings`
+
+Returns savings breakdown by type, current month total, and paginated savings history.
+
+**Query params (all optional):**
+
+| Param            | Type | Description                 |
+| ---------------- | ---- | --------------------------- |
+| `saving_type_id` | int  | Filter by saving type       |
+| `start_date`     | date | From date (YYYY-MM-DD)      |
+| `end_date`       | date | To date (YYYY-MM-DD)        |
+| `per_page`       | int  | Items per page (default 20) |
+
+**Response:**
+
+```json
+{
+    "success": true,
+    "data": {
+        "type_balances": [
+            { "id": 1, "name": "Monthly Savings", "amount": 80000.0 },
+            { "id": 2, "name": "Special Savings", "amount": 45000.0 }
+        ],
+        "current_month_total": 5000.0,
+        "total_savings": 125000.0,
+        "total_withdrawals": 25000.0,
+        "savings_balance": 100000.0,
+        "recent_savings": {
+            "current_page": 1,
+            "data": [
+                {
+                    "id": 45,
+                    "user_id": 1,
+                    "saving_type_id": 1,
+                    "amount": "5000.00",
+                    "status": "completed",
+                    "saving_type": { "id": 1, "name": "Monthly Savings" },
+                    "created_at": "2026-02-15T10:30:00.000000Z"
+                }
+            ],
+            "last_page": 3,
+            "per_page": 20,
+            "total": 58
+        }
+    }
+}
+```
+
+**Mobile screen:** `SavingsScreen.js`
+
+- Top cards: map over `type_balances[]` + show `savings_balance` & `current_month_total`
+- Bottom table: paginated from `recent_savings` — use `onEndReached` for infinite scroll
+- Filter bar: saving type dropdown + date pickers → re-fetch with query params
+
+---
+
+#### `GET /member/savings/monthly-summary?year=2026`
+
+Monthly savings grid (rows = saving types, columns = Jan–Dec).
+
+**Query params:**
+
+| Param  | Type | Default      |
+| ------ | ---- | ------------ |
+| `year` | int  | Current year |
+
+**Response:**
+
+```json
+{
+    "success": true,
+    "data": {
+        "year": "2026",
+        "years": [
+            { "id": 3, "year": 2026 },
+            { "id": 2, "year": 2025 }
+        ],
+        "months": [
+            { "id": 1, "name": "January" },
+            { "id": 2, "name": "February" }
+        ],
+        "summary": [
+            {
+                "saving_type_id": 1,
+                "name": "Monthly Savings",
+                "months": [
+                    { "month_id": 1, "month": "January", "amount": 5000.0 },
+                    { "month_id": 2, "month": "February", "amount": 5000.0 }
+                ],
+                "total": 10000.0
+            }
+        ]
+    }
+}
+```
+
+**Mobile screen:** `SavingsMonthlySummaryScreen.js` — horizontally scrollable table. Year picker at top.
+
+---
+
+### Member – Savings Settings
+
+Members can set how much they want deducted per saving type per month.
+
+#### `GET /member/savings-settings`
+
+**Response:** paginated list of settings + dropdown data for the create form.
+
+```json
+{
+    "success": true,
+    "data": {
+        "settings": {
+            "current_page": 1,
+            "data": [
+                {
+                    "id": 12,
+                    "saving_type": { "id": 1, "name": "Monthly Savings" },
+                    "month": { "id": 3, "name": "March" },
+                    "year": { "id": 3, "year": 2026 },
+                    "amount": "5000.00",
+                    "status": "approved"
+                }
+            ]
+        },
+        "saving_types": [{ "id": 1, "name": "Monthly Savings" }],
+        "months": [{ "id": 1, "name": "January" }],
+        "years": [{ "id": 3, "year": 2026 }]
+    }
+}
+```
+
+#### `POST /member/savings-settings`
+
+| Field            | Type   | Required |
+| ---------------- | ------ | -------- |
+| `saving_type_id` | int    | Yes      |
+| `month_id`       | int    | Yes      |
+| `year_id`        | int    | Yes      |
+| `amount`         | number | Yes      |
+
+**Response (201):**
+
+```json
+{
+    "success": true,
+    "message": "Monthly savings setting created successfully.",
+    "data": {
+        "id": 13,
+        "amount": "5000.00",
+        "status": "approved",
+        "...": "..."
+    }
+}
+```
+
+#### `PUT /member/savings-settings/{id}`
+
+Only pending settings can be updated. Body: `{ "amount": 7000 }`
+
+#### `DELETE /member/savings-settings/{id}`
+
+Only pending settings can be deleted.
+
+---
+
+### Member – Shares
+
+#### `GET /member/shares`
+
+```json
+{
+    "success": true,
+    "data": {
+        "shares": [
+            {
+                "id": 5,
+                "share_type": "Ordinary Share",
+                "certificate_number": "SHR-2026-AbCdEfGh",
+                "amount_paid": 10000.0,
+                "status": "approved",
+                "created_at": "2026-01-10T09:00:00+01:00"
+            }
+        ],
+        "total_approved": 10000.0,
+        "share_types": [
+            {
+                "id": 1,
+                "name": "Ordinary Share",
+                "minimum_amount": "1000.00",
+                "maximum_amount": "50000.00"
+            }
+        ]
+    }
+}
+```
+
+**Mobile screen:** `SharesScreen.js` — Top card shows `total_approved`, list shows `shares[]`, FAB button → purchase form using `share_types[]`.
+
+#### `POST /member/shares`
+
+| Field             | Type | Required |
+| ----------------- | ---- | -------- |
+| `share_type_id`   | int  | Yes      |
+| `number_of_units` | int  | Yes (≥1) |
+
+**Response (201):**
+
+```json
+{
+    "success": true,
+    "message": "Share purchase request submitted successfully.",
+    "data": {
+        "id": 6,
+        "share_type_id": 1,
+        "certificate_number": "SHR-2026-XyZaBcDe",
+        "amount_paid": 5000.0,
+        "status": "pending"
+    }
+}
+```
+
+---
+
+### Member – Loans
+
+#### `GET /member/loans`
+
+Returns all member's loans with repayment progress and available loan types.
+
+```json
+{
+    "success": true,
+    "data": {
+        "loans": [
+            {
+                "id": 3,
+                "reference": "LOAN-65F2A1B3C",
+                "loan_type": "Soft Loan",
+                "amount": 100000.0,
+                "interest_amount": 10000.0,
+                "total_amount": 110000.0,
+                "monthly_payment": 18333.33,
+                "paid_amount": 36666.66,
+                "balance": 73333.34,
+                "duration": 6,
+                "purpose": "School Fees",
+                "status": "approved",
+                "start_date": "2026-01-15",
+                "end_date": "2026-07-15",
+                "application_fee": 500.0,
+                "guarantors": [
+                    { "name": "John Doe", "status": "approved" },
+                    { "name": "Jane Smith", "status": "pending" }
+                ],
+                "created_at": "2026-01-15T10:00:00+01:00"
+            }
+        ],
+        "loan_types": [
+            {
+                "id": 1,
+                "name": "Soft Loan",
+                "interest_rate": "10.00",
+                "duration_months": 12,
+                "minimum_amount": "10000.00",
+                "maximum_amount": "500000.00",
+                "no_guarantors": 2,
+                "application_fee": "500.00",
+                "required_active_savings_months": 6,
+                "savings_multiplier": "3.00"
+            }
+        ]
+    }
+}
+```
+
+**Mobile screen:** `LoansScreen.js`
+
+- Active loans section: filter `loans[]` where `status === 'approved'` — show progress bar `paid_amount / total_amount`
+- Loan history: all items
+- Apply button → `LoanApplyScreen.js` with `loan_types[]` for the form
+
+#### `GET /member/loans/{id}`
+
+Detailed loan view with repayment history.
+
+```json
+{
+    "success": true,
+    "data": {
+        "id": 3,
+        "reference": "LOAN-65F2A1B3C",
+        "loan_type": "Soft Loan",
+        "amount": 100000.0,
+        "interest_amount": 10000.0,
+        "total_amount": 110000.0,
+        "monthly_payment": 18333.33,
+        "paid_amount": 36666.66,
+        "balance": 73333.34,
+        "duration": 6,
+        "purpose": "School Fees",
+        "status": "approved",
+        "start_date": "2026-01-15",
+        "end_date": "2026-07-15",
+        "application_fee": 500.0,
+        "guarantors": [
+            {
+                "id": 1,
+                "name": "John Doe",
+                "member_no": "MEM-001",
+                "status": "approved",
+                "comment": null
+            },
+            {
+                "id": 2,
+                "name": "Jane Smith",
+                "member_no": "MEM-002",
+                "status": "pending",
+                "comment": null
+            }
+        ],
+        "repayments": [
+            {
+                "id": 10,
+                "reference": "REP-ABC123",
+                "amount": 18333.33,
+                "payment_date": "2026-02-15",
+                "status": "completed"
+            },
+            {
+                "id": 11,
+                "reference": "REP-DEF456",
+                "amount": 18333.33,
+                "payment_date": "2026-03-15",
+                "status": "completed"
+            }
+        ],
+        "created_at": "2026-01-15T10:00:00+01:00"
+    }
+}
+```
+
+**Mobile screen:** `LoanDetailScreen.js` — summary card + guarantor list + repayment FlatList.
+
+#### `POST /member/loans`
+
+Apply for a new loan.
+
+| Field           | Type   | Required              |
+| --------------- | ------ | --------------------- |
+| `loan_type_id`  | int    | Yes                   |
+| `amount`        | number | Yes (≥1000)           |
+| `duration`      | int    | Yes (≤ loan type max) |
+| `purpose`       | string | Yes (max 500)         |
+| `guarantor_ids` | int[]  | If loan type requires |
+
+**Response (201):**
+
+```json
+{
+    "success": true,
+    "message": "Loan application submitted successfully.",
+    "data": {
+        "id": 4,
+        "reference": "LOAN-67A3B2C1D",
+        "status": "pending",
+        "...": "..."
+    }
+}
+```
+
+#### `GET /member/loan-types`
+
+Returns all active loan types (useful for the loan application form).
+
+#### `POST /member/loan-calculator`
+
+Check eligibility and calculate repayment before applying.
+
+| Field          | Type   | Required   |
+| -------------- | ------ | ---------- |
+| `loan_type_id` | int    | Yes        |
+| `amount`       | number | Yes        |
+| `duration`     | int    | Yes (1–18) |
+
+**Response:**
+
+```json
+{
+    "success": true,
+    "data": {
+        "eligibility": {
+            "eligible": true,
+            "messages": []
+        },
+        "loan_details": {
+            "principal": 100000.0,
+            "interest_rate": 10.0,
+            "total_interest": 10000.0,
+            "total_amount": 110000.0,
+            "monthly_repayment": 18333.33,
+            "duration": 6
+        },
+        "loan_type": { "id": 1, "name": "Soft Loan" }
+    }
+}
+```
+
+**Mobile screen:** `LoanCalculatorScreen.js` — form → results card showing eligibility + breakdown.
+
+#### `GET /member/members?search=john`
+
+Search other members to select as guarantors. Returns `id`, `surname`, `firstname`, `member_no`.
+
+---
+
+### Member – Guarantor Requests
+
+When another member applies for a loan and selects you as guarantor.
+
+#### `GET /member/guarantor-requests`
+
+```json
+{
+    "success": true,
+    "data": [
+        {
+            "id": 7,
+            "loan_id": 4,
+            "borrower": "Adewale Ogunleye",
+            "member_no": "MEM-042",
+            "loan_type": "Soft Loan",
+            "loan_amount": 100000.0,
+            "status": "pending",
+            "comment": null,
+            "created_at": "2026-02-20T14:00:00+01:00"
+        }
+    ]
+}
+```
+
+**Mobile screen:** `GuarantorRequestsScreen.js` — list with Accept/Reject buttons for pending items.
+
+#### `POST /member/guarantor-requests/{loanId}/respond`
+
+| Field      | Type   | Required                       |
+| ---------- | ------ | ------------------------------ |
+| `response` | string | Yes (`approved` or `rejected`) |
+| `reason`   | string | Required if `rejected`         |
+
+**Response:**
+
+```json
+{ "success": true, "message": "Response submitted successfully." }
+```
+
+---
+
+### Member – Withdrawals
+
+#### `GET /member/withdrawals`
+
+**Query params:** `status` (pending/approved/completed/rejected), `per_page`.
+
+```json
+{
+    "success": true,
+    "data": {
+        "withdrawals": {
+            "current_page": 1,
+            "data": [
+                {
+                    "id": 8,
+                    "saving_type": { "id": 1, "name": "Monthly Savings" },
+                    "amount": "25000.00",
+                    "bank_name": "GTBank",
+                    "account_number": "0123456789",
+                    "account_name": "John Doe",
+                    "reason": "Emergency",
+                    "reference": "WDR-ABCDEFGH",
+                    "status": "pending",
+                    "created_at": "2026-02-18T09:00:00.000000Z"
+                }
+            ]
+        },
+        "total_amount": 25000.0,
+        "approved_amount": 0.0
+    }
+}
+```
+
+**Mobile screen:** `WithdrawalsScreen.js` — list with status badges, summary cards at top, FAB → create form.
+
+#### `POST /member/withdrawals`
+
+| Field            | Type   | Required |
+| ---------------- | ------ | -------- |
+| `saving_type_id` | int    | Yes      |
+| `amount`         | number | Yes (≥1) |
+| `reason`         | string | Yes      |
+| `bank_name`      | string | Yes      |
+| `account_number` | string | Yes      |
+| `account_name`   | string | Yes      |
+
+**Response (201):**
+
+```json
+{
+    "success": true,
+    "message": "Withdrawal request submitted successfully.",
+    "data": {
+        "id": 9,
+        "reference": "WDR-XYZABC12",
+        "status": "pending",
+        "...": "..."
+    }
+}
+```
+
+**Validation:** Returns 422 if amount exceeds available balance for that saving type.
+
+#### `GET /member/withdrawals/{id}`
+
+Detailed withdrawal view.
+
+---
+
+### Member – Transactions / Passbook
+
+#### `GET /member/transactions`
+
+The member's full passbook.
+
+**Query params:** `type` (savings/withdrawal/loan/loan_repayment/commodity_payment), `start_date`, `end_date`, `per_page` (default 50).
+
+```json
+{
+    "success": true,
+    "data": {
+        "transactions": {
+            "current_page": 1,
+            "data": [
+                {
+                    "id": 100,
+                    "type": "savings",
+                    "credit_amount": "5000.00",
+                    "debit_amount": "0.00",
+                    "balance": "125000.00",
+                    "reference": "TRX-2026-AbCdEfGh",
+                    "description": "Monthly Savings Contribution",
+                    "transaction_date": "2026-02-15T10:30:00.000000Z",
+                    "status": "completed"
+                }
+            ]
+        },
+        "total_credits": 200000.0,
+        "total_debits": 75000.0,
+        "net_balance": 125000.0
+    }
+}
+```
+
+**Mobile screen:** `PassbookScreen.js`
+
+- Summary cards: `total_credits`, `total_debits`, `net_balance`
+- FlatList with credit/debit color coding (green/red)
+- Filter bar: type dropdown + date range pickers
+- Tap row → `TransactionDetailScreen.js`
+
+#### `GET /member/transactions/{id}`
+
+Single transaction detail.
+
+---
+
+### Member – Commodities
+
+#### `GET /member/commodities`
+
+Browse available commodities (paginated).
+
+```json
+{
+    "success": true,
+    "data": {
+        "current_page": 1,
+        "data": [
+            {
+                "id": 1,
+                "name": "50kg Rice",
+                "description": "Premium rice bag",
+                "price": "35000.00",
+                "quantity_available": 50,
+                "image": "commodities/rice.jpg",
+                "allow_installment": true,
+                "max_installment_months": 6,
+                "initial_deposit_percentage": "30.00",
+                "start_date": "2026-01-01",
+                "end_date": "2026-06-30"
+            }
+        ]
+    }
+}
+```
+
+**Mobile screen:** `CommoditiesScreen.js` — grid/list of commodities with images.
+
+#### `GET /member/commodities/{id}`
+
+Full commodity detail (includes image URL, installment info).
+
+#### `POST /member/commodities/{id}/subscribe`
+
+| Field             | Type   | Required                |
+| ----------------- | ------ | ----------------------- |
+| `quantity`        | int    | Yes (≥1, ≤ available)   |
+| `reason`          | string | No                      |
+| `payment_type`    | string | `full` or `installment` |
+| `initial_deposit` | number | Required if installment |
+
+**Response (201):**
+
+```json
+{
+    "success": true,
+    "message": "Subscription submitted successfully.",
+    "data": {
+        "id": 5,
+        "reference": "COM-A1B2C3D4-20260220",
+        "status": "pending",
+        "total_amount": 35000.0
+    }
+}
+```
+
+#### `GET /member/commodity-subscriptions`
+
+My subscriptions (paginated). Each includes commodity name, status, total amount, payment type.
+
+#### `GET /member/commodity-subscriptions/{id}`
+
+Detailed subscription with payment progress.
+
+```json
+{
+    "success": true,
+    "data": {
+        "subscription": {
+            "id": 5,
+            "commodity": { "name": "50kg Rice" },
+            "total_amount": 35000.0,
+            "payment_type": "installment",
+            "...": "..."
+        },
+        "total_amount": 35000.0,
+        "initial_deposit": 10500.0,
+        "paid_amount": 17500.0,
+        "remaining": 17500.0
+    }
+}
+```
+
+#### `POST /member/commodity-subscriptions/{id}/payments`
+
+Make installment payment.
+
+| Field               | Type   | Required                          |
+| ------------------- | ------ | --------------------------------- |
+| `amount`            | number | Yes (≤ remaining)                 |
+| `payment_method`    | string | Yes: cash/bank_transfer/deduction |
+| `payment_reference` | string | No                                |
+| `month_id`          | int    | Yes                               |
+| `year_id`           | int    | Yes                               |
+
+---
+
+### Member – Notifications
+
+#### `GET /member/notifications`
+
+Paginated notifications list.
+
+```json
+{
+    "success": true,
+    "data": {
+        "current_page": 1,
+        "data": [
+            {
+                "id": 20,
+                "title": "Loan Approved",
+                "message": "Your soft loan of ₦100,000 has been approved.",
+                "type": "loan",
+                "read_at": null,
+                "data": { "loan_id": 3 },
+                "created_at": "2026-02-20T14:30:00.000000Z"
+            }
+        ]
+    }
+}
+```
+
+**Mobile screen:** `NotificationsScreen.js` — unread items bolded, tap marks as read + navigates to related screen.
+
+#### `POST /member/notifications/{id}/read`
+
+Marks a single notification as read.
+
+#### `POST /member/notifications/read-all`
+
+Marks all unread notifications as read.
+
+---
+
+### Member – Financial Summary
+
+#### `GET /member/financial-summary?year=2026`
+
+Comprehensive yearly financial breakdown (savings, shares, loan repayments, commodity payments) by month.
+
+**Response:**
+
+```json
+{
+    "success": true,
+    "data": {
+        "year": "2026",
+        "years": [{ "id": 3, "year": 2026 }],
+        "months": [
+            { "id": 1, "name": "January" },
+            { "id": 2, "name": "February" }
+        ],
+        "savings": [
+            {
+                "id": 1,
+                "name": "Monthly Savings",
+                "months": [
+                    { "month_id": 1, "amount": 5000.0 },
+                    { "month_id": 2, "amount": 5000.0 }
+                ],
+                "total": 10000.0
+            }
+        ],
+        "shares": {
+            "months": [{ "month_id": 1, "amount": 1000.0 }],
+            "total": 1000.0
+        },
+        "loans": [
+            {
+                "id": 3,
+                "name": "Soft Loan (LOAN-65F2A1B3C)",
+                "months": [{ "month_id": 2, "amount": 18333.33 }],
+                "total": 18333.33
+            }
+        ],
+        "commodities": []
+    }
+}
+```
+
+**Mobile screen:** `FinancialSummaryScreen.js` — year picker + horizontally scrollable table with savings, shares, loans, commodities rows.
+
+---
+
+### Member – Profile
+
+#### `PUT /member/profile`
+
+Update editable profile fields.
+
+| Field              | Type   | Required |
+| ------------------ | ------ | -------- |
+| `phone_number`     | string | No       |
+| `home_address`     | string | No       |
+| `nok`              | string | No       |
+| `nok_phone`        | string | No       |
+| `nok_address`      | string | No       |
+| `nok_relationship` | string | No       |
+| `bank_name`        | string | No       |
+| `account_number`   | string | No       |
+| `account_name`     | string | No       |
+
+**Response:** Updated user object.
+
+---
+
+### Member – Resources
+
+#### `GET /member/resources`
+
+Downloadable resources/documents (paginated).
+
+```json
+{
+    "success": true,
+    "data": {
+        "current_page": 1,
+        "data": [
+            {
+                "id": 1,
+                "title": "Membership Handbook",
+                "description": "Official cooperative handbook",
+                "file_type": "pdf",
+                "file_size": 2048,
+                "download_url": "https://your-domain.com/api/v1/member/resources/1/download",
+                "created_at": "2026-01-01T00:00:00+01:00"
+            }
+        ]
+    }
+}
+```
+
+#### `GET /member/resources/{id}/download`
+
+Returns the file as a streamed download. Use `Linking.openURL()` or `expo-file-system` in the mobile app.
+
+---
+
+## Available Modules – Admin (Upcoming)
 
 ### Admin Endpoints (`/api/v1/admin/...`)
 
-| Module                      | Planned Endpoints                        | Description                                                   |
-| --------------------------- | ---------------------------------------- | ------------------------------------------------------------- |
-| **Dashboard**               | `GET /admin/dashboard`                   | System-wide stats                                             |
-| **Members**                 | `GET /admin/members`                     | List all members (paginated, searchable)                      |
-|                             | `GET /admin/members/{id}`                | Member details                                                |
-|                             | `PUT /admin/members/{id}`                | Update member                                                 |
-|                             | `POST /admin/members/{id}/approve`       | Approve membership                                            |
-| **Entrance Fees**           | `GET /admin/entrance-fees`               | List entrance fee records                                     |
-|                             | `POST /admin/entrance-fees`              | Record entrance fee                                           |
-|                             | `POST /admin/entrance-fees/import`       | Bulk import (Excel)                                           |
-| **Savings Management**      | `GET /admin/savings`                     | All savings records                                           |
-|                             | `POST /admin/savings`                    | Record a saving                                               |
-|                             | `POST /admin/savings/import`             | Bulk import                                                   |
-| **Saving Types**            | `CRUD /admin/saving-types`               | Manage saving categories                                      |
-| **Shares**                  | `CRUD /admin/shares`                     | Manage share transactions                                     |
-| **Share Types**             | `CRUD /admin/share-types`                | Manage share categories                                       |
-| **Loans**                   | `GET /admin/loans`                       | All loan applications                                         |
-|                             | `POST /admin/loans/{id}/approve`         | Approve loan                                                  |
-|                             | `POST /admin/loans/{id}/reject`          | Reject loan                                                   |
-| **Loan Types**              | `CRUD /admin/loan-types`                 | Manage loan categories                                        |
-| **Loan Repayments**         | `GET /admin/loan-repayments`             | Repayment records                                             |
-|                             | `POST /admin/loan-repayments`            | Record repayment                                              |
-| **Transactions**            | `GET /admin/transactions`                | All transactions                                              |
-| **Withdrawals**             | `GET /admin/withdrawals`                 | Process withdrawal requests                                   |
-|                             | `POST /admin/withdrawals/{id}/approve`   | Approve withdrawal                                            |
-| **Commodities**             | `CRUD /admin/commodities`                | Manage commodities                                            |
-| **Commodity Subscriptions** | `GET /admin/commodity-subscriptions`     | All subscriptions                                             |
-| **Reports**                 | `GET /admin/reports`                     | Generate reports                                              |
-|                             | `GET /admin/reports/transaction-summary` | Transaction summary report                                    |
-| **Financial Summary**       | `GET /admin/financial-summary`           | Overall cooperative finances                                  |
-| **FAQs**                    | `CRUD /admin/faqs`                       | Manage FAQs                                                   |
-| **Profile Updates**         | `GET /admin/profile-updates`             | Review member profile change requests                         |
-| **Admin Users**             | `CRUD /admin/admins`                     | Manage admin accounts (requires `view_users` permission)      |
-| **Roles**                   | `CRUD /admin/roles`                      | Manage roles & permissions (requires `view_roles` permission) |
+| Module                 | Planned Endpoints                      | Description                              |
+| ---------------------- | -------------------------------------- | ---------------------------------------- |
+| **Dashboard**          | `GET /admin/dashboard`                 | System-wide stats                        |
+| **Members**            | `GET /admin/members`                   | List all members (paginated, searchable) |
+|                        | `GET /admin/members/{id}`              | Member details                           |
+|                        | `PUT /admin/members/{id}`              | Update member                            |
+|                        | `POST /admin/members/{id}/approve`     | Approve membership                       |
+| **Entrance Fees**      | `GET /admin/entrance-fees`             | List entrance fee records                |
+|                        | `POST /admin/entrance-fees`            | Record entrance fee                      |
+| **Savings Management** | `GET /admin/savings`                   | All savings records                      |
+|                        | `POST /admin/savings`                  | Record a saving                          |
+| **Saving Types**       | `CRUD /admin/saving-types`             | Manage saving categories                 |
+| **Shares**             | `CRUD /admin/shares`                   | Manage share transactions                |
+| **Share Types**        | `CRUD /admin/share-types`              | Manage share categories                  |
+| **Loans**              | `GET /admin/loans`                     | All loan applications                    |
+|                        | `POST /admin/loans/{id}/approve`       | Approve loan                             |
+|                        | `POST /admin/loans/{id}/reject`        | Reject loan                              |
+| **Loan Types**         | `CRUD /admin/loan-types`               | Manage loan categories                   |
+| **Loan Repayments**    | `POST /admin/loan-repayments`          | Record repayment                         |
+| **Transactions**       | `GET /admin/transactions`              | All transactions                         |
+| **Withdrawals**        | `POST /admin/withdrawals/{id}/approve` | Approve withdrawal                       |
+| **Commodities**        | `CRUD /admin/commodities`              | Manage commodities                       |
+| **Reports**            | `GET /admin/reports`                   | Generate reports                         |
+| **Financial Summary**  | `GET /admin/financial-summary`         | Overall cooperative finances             |
+| **FAQs**               | `CRUD /admin/faqs`                     | Manage FAQs                              |
+| **Admin Users**        | `CRUD /admin/admins`                   | Manage admin accounts                    |
+| **Roles**              | `CRUD /admin/roles`                    | Manage roles & permissions               |
 
 ---
 
@@ -1039,10 +1912,15 @@ OgitechCoop/
     │   └── slices/
     │       ├── authSlice.js       # Auth state: user, token, role + async thunks
     │       ├── lookupSlice.js     # States, LGAs, faculties, departments
-    │       ├── savingsSlice.js    # (Phase 2)
-    │       ├── loansSlice.js      # (Phase 2)
-    │       ├── sharesSlice.js     # (Phase 2)
-    │       └── notificationsSlice.js # (Phase 2)
+    │       ├── dashboardSlice.js  # Dashboard summary data
+    │       ├── savingsSlice.js    # Savings list, monthly summary, settings
+    │       ├── sharesSlice.js     # Shares list + purchase
+    │       ├── loansSlice.js      # Loans list, detail, apply, calculator
+    │       ├── withdrawalsSlice.js # Withdrawal list + request
+    │       ├── transactionsSlice.js # Passbook transactions
+    │       ├── commoditiesSlice.js # Commodities, subscriptions, payments
+    │       ├── notificationsSlice.js # Notifications + read
+    │       └── financialSlice.js  # Financial summary by year
     ├── navigation/
     │   ├── AppNavigator.js        # Reads Redux state to pick stack
     │   ├── AuthStack.js           # Login, Register, Forgot Password
@@ -1056,13 +1934,24 @@ OgitechCoop/
     │   ├── member/
     │   │   ├── DashboardScreen.js
     │   │   ├── SavingsScreen.js
+    │   │   ├── SavingsMonthlySummaryScreen.js
+    │   │   ├── SavingsSettingsScreen.js
     │   │   ├── SharesScreen.js
     │   │   ├── LoansScreen.js
-    │   │   ├── PassbookScreen.js
+    │   │   ├── LoanDetailScreen.js
+    │   │   ├── LoanApplyScreen.js
+    │   │   ├── LoanCalculatorScreen.js
+    │   │   ├── GuarantorRequestsScreen.js
     │   │   ├── WithdrawalsScreen.js
+    │   │   ├── PassbookScreen.js
+    │   │   ├── TransactionDetailScreen.js
     │   │   ├── CommoditiesScreen.js
+    │   │   ├── CommodityDetailScreen.js
+    │   │   ├── CommoditySubscriptionsScreen.js
     │   │   ├── NotificationsScreen.js
-    │   │   └── ProfileScreen.js
+    │   │   ├── FinancialSummaryScreen.js
+    │   │   ├── ProfileScreen.js
+    │   │   └── ResourcesScreen.js
     │   └── admin/
     │       ├── DashboardScreen.js
     │       ├── MembersScreen.js
@@ -1073,6 +1962,8 @@ OgitechCoop/
     │   ├── FormInput.js
     │   ├── Button.js
     │   ├── Card.js
+    │   ├── EmptyState.js
+    │   ├── FilterBar.js
     │   └── LoadingSpinner.js
     └── utils/
         ├── theme.js               # Colors, fonts
@@ -1466,6 +2357,986 @@ export const COLORS = {
 };
 ```
 
+### Member Redux Slices (Phase 2)
+
+Below are the Redux slices for all member modules. Register each in `src/store/index.js` by importing and adding to `combineReducers`.
+
+#### `src/store/slices/dashboardSlice.js`
+
+```javascript
+import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
+import apiClient from "../../api/client";
+
+export const fetchDashboard = createAsyncThunk(
+    "dashboard/fetch",
+    async (_, { rejectWithValue }) => {
+        try {
+            const res = await apiClient.get("/member/dashboard");
+            return res.data.data;
+        } catch (err) {
+            return rejectWithValue(err.response?.data);
+        }
+    },
+);
+
+const dashboardSlice = createSlice({
+    name: "dashboard",
+    initialState: {
+        data: null,
+        loading: false,
+        error: null,
+    },
+    reducers: {
+        clearDashboard: (state) => {
+            state.data = null;
+        },
+    },
+    extraReducers: (builder) => {
+        builder
+            .addCase(fetchDashboard.pending, (state) => {
+                state.loading = true;
+                state.error = null;
+            })
+            .addCase(fetchDashboard.fulfilled, (state, action) => {
+                state.loading = false;
+                state.data = action.payload;
+            })
+            .addCase(fetchDashboard.rejected, (state, action) => {
+                state.loading = false;
+                state.error =
+                    action.payload?.message || "Failed to load dashboard";
+            });
+    },
+});
+
+export const { clearDashboard } = dashboardSlice.actions;
+export const selectDashboard = (state) => state.dashboard.data;
+export const selectDashboardLoading = (state) => state.dashboard.loading;
+export default dashboardSlice.reducer;
+```
+
+#### `src/store/slices/savingsSlice.js`
+
+```javascript
+import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
+import apiClient from "../../api/client";
+
+export const fetchSavings = createAsyncThunk(
+    "savings/fetch",
+    async (params = {}, { rejectWithValue }) => {
+        try {
+            const res = await apiClient.get("/member/savings", { params });
+            return res.data.data;
+        } catch (err) {
+            return rejectWithValue(err.response?.data);
+        }
+    },
+);
+
+export const fetchSavingsMonthlySummary = createAsyncThunk(
+    "savings/fetchMonthlySummary",
+    async (year, { rejectWithValue }) => {
+        try {
+            const res = await apiClient.get("/member/savings/monthly-summary", {
+                params: { year },
+            });
+            return res.data.data;
+        } catch (err) {
+            return rejectWithValue(err.response?.data);
+        }
+    },
+);
+
+export const fetchSavingsSettings = createAsyncThunk(
+    "savings/fetchSettings",
+    async (_, { rejectWithValue }) => {
+        try {
+            const res = await apiClient.get("/member/savings-settings");
+            return res.data.data;
+        } catch (err) {
+            return rejectWithValue(err.response?.data);
+        }
+    },
+);
+
+export const createSavingsSetting = createAsyncThunk(
+    "savings/createSetting",
+    async (data, { rejectWithValue }) => {
+        try {
+            const res = await apiClient.post("/member/savings-settings", data);
+            return res.data;
+        } catch (err) {
+            return rejectWithValue(err.response?.data);
+        }
+    },
+);
+
+const savingsSlice = createSlice({
+    name: "savings",
+    initialState: {
+        data: null, // { type_balances, current_month_total, savings_balance, recent_savings }
+        monthlySummary: null,
+        settings: null,
+        loading: false,
+        error: null,
+    },
+    reducers: {},
+    extraReducers: (builder) => {
+        builder
+            .addCase(fetchSavings.pending, (state) => {
+                state.loading = true;
+            })
+            .addCase(fetchSavings.fulfilled, (state, action) => {
+                state.loading = false;
+                state.data = action.payload;
+            })
+            .addCase(fetchSavings.rejected, (state, action) => {
+                state.loading = false;
+                state.error = action.payload?.message;
+            })
+            .addCase(fetchSavingsMonthlySummary.fulfilled, (state, action) => {
+                state.monthlySummary = action.payload;
+            })
+            .addCase(fetchSavingsSettings.fulfilled, (state, action) => {
+                state.settings = action.payload;
+            });
+    },
+});
+
+export const selectSavingsData = (state) => state.savings.data;
+export const selectSavingsLoading = (state) => state.savings.loading;
+export const selectSavingsMonthlySummary = (state) =>
+    state.savings.monthlySummary;
+export const selectSavingsSettings = (state) => state.savings.settings;
+export default savingsSlice.reducer;
+```
+
+#### `src/store/slices/sharesSlice.js`
+
+```javascript
+import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
+import apiClient from "../../api/client";
+
+export const fetchShares = createAsyncThunk(
+    "shares/fetch",
+    async (_, { rejectWithValue }) => {
+        try {
+            const res = await apiClient.get("/member/shares");
+            return res.data.data;
+        } catch (err) {
+            return rejectWithValue(err.response?.data);
+        }
+    },
+);
+
+export const purchaseShare = createAsyncThunk(
+    "shares/purchase",
+    async (data, { rejectWithValue }) => {
+        try {
+            const res = await apiClient.post("/member/shares", data);
+            return res.data;
+        } catch (err) {
+            return rejectWithValue(err.response?.data);
+        }
+    },
+);
+
+const sharesSlice = createSlice({
+    name: "shares",
+    initialState: { data: null, loading: false, error: null },
+    reducers: {},
+    extraReducers: (builder) => {
+        builder
+            .addCase(fetchShares.pending, (state) => {
+                state.loading = true;
+            })
+            .addCase(fetchShares.fulfilled, (state, action) => {
+                state.loading = false;
+                state.data = action.payload; // { shares, total_approved, share_types }
+            })
+            .addCase(fetchShares.rejected, (state, action) => {
+                state.loading = false;
+                state.error = action.payload?.message;
+            });
+    },
+});
+
+export const selectSharesData = (state) => state.shares.data;
+export const selectSharesLoading = (state) => state.shares.loading;
+export default sharesSlice.reducer;
+```
+
+#### `src/store/slices/loansSlice.js`
+
+```javascript
+import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
+import apiClient from "../../api/client";
+
+export const fetchLoans = createAsyncThunk(
+    "loans/fetch",
+    async (_, { rejectWithValue }) => {
+        try {
+            const res = await apiClient.get("/member/loans");
+            return res.data.data;
+        } catch (err) {
+            return rejectWithValue(err.response?.data);
+        }
+    },
+);
+
+export const fetchLoanDetail = createAsyncThunk(
+    "loans/fetchDetail",
+    async (loanId, { rejectWithValue }) => {
+        try {
+            const res = await apiClient.get(`/member/loans/${loanId}`);
+            return res.data.data;
+        } catch (err) {
+            return rejectWithValue(err.response?.data);
+        }
+    },
+);
+
+export const applyForLoan = createAsyncThunk(
+    "loans/apply",
+    async (data, { rejectWithValue }) => {
+        try {
+            const res = await apiClient.post("/member/loans", data);
+            return res.data;
+        } catch (err) {
+            return rejectWithValue(err.response?.data);
+        }
+    },
+);
+
+export const calculateLoan = createAsyncThunk(
+    "loans/calculate",
+    async (data, { rejectWithValue }) => {
+        try {
+            const res = await apiClient.post("/member/loan-calculator", data);
+            return res.data.data;
+        } catch (err) {
+            return rejectWithValue(err.response?.data);
+        }
+    },
+);
+
+export const searchMembers = createAsyncThunk(
+    "loans/searchMembers",
+    async (search, { rejectWithValue }) => {
+        try {
+            const res = await apiClient.get("/member/members", {
+                params: { search },
+            });
+            return res.data.data;
+        } catch (err) {
+            return rejectWithValue(err.response?.data);
+        }
+    },
+);
+
+export const fetchGuarantorRequests = createAsyncThunk(
+    "loans/guarantorRequests",
+    async (_, { rejectWithValue }) => {
+        try {
+            const res = await apiClient.get("/member/guarantor-requests");
+            return res.data.data;
+        } catch (err) {
+            return rejectWithValue(err.response?.data);
+        }
+    },
+);
+
+export const respondGuarantor = createAsyncThunk(
+    "loans/respondGuarantor",
+    async ({ loanId, ...data }, { rejectWithValue }) => {
+        try {
+            const res = await apiClient.post(
+                `/member/guarantor-requests/${loanId}/respond`,
+                data,
+            );
+            return res.data;
+        } catch (err) {
+            return rejectWithValue(err.response?.data);
+        }
+    },
+);
+
+const loansSlice = createSlice({
+    name: "loans",
+    initialState: {
+        data: null, // { loans, loan_types }
+        loanDetail: null,
+        calculatorResult: null,
+        guarantorRequests: [],
+        memberSearchResults: [],
+        loading: false,
+        error: null,
+    },
+    reducers: {
+        clearLoanDetail: (state) => {
+            state.loanDetail = null;
+        },
+        clearCalculator: (state) => {
+            state.calculatorResult = null;
+        },
+        clearMemberSearch: (state) => {
+            state.memberSearchResults = [];
+        },
+    },
+    extraReducers: (builder) => {
+        builder
+            .addCase(fetchLoans.pending, (state) => {
+                state.loading = true;
+            })
+            .addCase(fetchLoans.fulfilled, (state, action) => {
+                state.loading = false;
+                state.data = action.payload;
+            })
+            .addCase(fetchLoans.rejected, (state, action) => {
+                state.loading = false;
+                state.error = action.payload?.message;
+            })
+            .addCase(fetchLoanDetail.fulfilled, (state, action) => {
+                state.loanDetail = action.payload;
+            })
+            .addCase(calculateLoan.fulfilled, (state, action) => {
+                state.calculatorResult = action.payload;
+            })
+            .addCase(searchMembers.fulfilled, (state, action) => {
+                state.memberSearchResults = action.payload;
+            })
+            .addCase(fetchGuarantorRequests.fulfilled, (state, action) => {
+                state.guarantorRequests = action.payload;
+            });
+    },
+});
+
+export const { clearLoanDetail, clearCalculator, clearMemberSearch } =
+    loansSlice.actions;
+export const selectLoansData = (state) => state.loans.data;
+export const selectLoanDetail = (state) => state.loans.loanDetail;
+export const selectCalculatorResult = (state) => state.loans.calculatorResult;
+export const selectGuarantorRequests = (state) => state.loans.guarantorRequests;
+export const selectMemberSearch = (state) => state.loans.memberSearchResults;
+export const selectLoansLoading = (state) => state.loans.loading;
+export default loansSlice.reducer;
+```
+
+#### `src/store/slices/withdrawalsSlice.js`
+
+```javascript
+import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
+import apiClient from "../../api/client";
+
+export const fetchWithdrawals = createAsyncThunk(
+    "withdrawals/fetch",
+    async (params = {}, { rejectWithValue }) => {
+        try {
+            const res = await apiClient.get("/member/withdrawals", { params });
+            return res.data.data;
+        } catch (err) {
+            return rejectWithValue(err.response?.data);
+        }
+    },
+);
+
+export const requestWithdrawal = createAsyncThunk(
+    "withdrawals/request",
+    async (data, { rejectWithValue }) => {
+        try {
+            const res = await apiClient.post("/member/withdrawals", data);
+            return res.data;
+        } catch (err) {
+            return rejectWithValue(err.response?.data);
+        }
+    },
+);
+
+const withdrawalsSlice = createSlice({
+    name: "withdrawals",
+    initialState: { data: null, loading: false, error: null },
+    reducers: {},
+    extraReducers: (builder) => {
+        builder
+            .addCase(fetchWithdrawals.pending, (state) => {
+                state.loading = true;
+            })
+            .addCase(fetchWithdrawals.fulfilled, (state, action) => {
+                state.loading = false;
+                state.data = action.payload; // { withdrawals, total_amount, approved_amount }
+            })
+            .addCase(fetchWithdrawals.rejected, (state, action) => {
+                state.loading = false;
+                state.error = action.payload?.message;
+            });
+    },
+});
+
+export const selectWithdrawalsData = (state) => state.withdrawals.data;
+export const selectWithdrawalsLoading = (state) => state.withdrawals.loading;
+export default withdrawalsSlice.reducer;
+```
+
+#### `src/store/slices/transactionsSlice.js`
+
+```javascript
+import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
+import apiClient from "../../api/client";
+
+export const fetchTransactions = createAsyncThunk(
+    "transactions/fetch",
+    async (params = {}, { rejectWithValue }) => {
+        try {
+            const res = await apiClient.get("/member/transactions", { params });
+            return res.data.data;
+        } catch (err) {
+            return rejectWithValue(err.response?.data);
+        }
+    },
+);
+
+export const fetchTransactionDetail = createAsyncThunk(
+    "transactions/fetchDetail",
+    async (id, { rejectWithValue }) => {
+        try {
+            const res = await apiClient.get(`/member/transactions/${id}`);
+            return res.data.data;
+        } catch (err) {
+            return rejectWithValue(err.response?.data);
+        }
+    },
+);
+
+const transactionsSlice = createSlice({
+    name: "transactions",
+    initialState: {
+        data: null, // { transactions, total_credits, total_debits, net_balance }
+        detail: null,
+        loading: false,
+    },
+    reducers: {
+        clearTransactionDetail: (state) => {
+            state.detail = null;
+        },
+    },
+    extraReducers: (builder) => {
+        builder
+            .addCase(fetchTransactions.pending, (state) => {
+                state.loading = true;
+            })
+            .addCase(fetchTransactions.fulfilled, (state, action) => {
+                state.loading = false;
+                state.data = action.payload;
+            })
+            .addCase(fetchTransactions.rejected, (state) => {
+                state.loading = false;
+            })
+            .addCase(fetchTransactionDetail.fulfilled, (state, action) => {
+                state.detail = action.payload;
+            });
+    },
+});
+
+export const { clearTransactionDetail } = transactionsSlice.actions;
+export const selectTransactionsData = (state) => state.transactions.data;
+export const selectTransactionDetail = (state) => state.transactions.detail;
+export const selectTransactionsLoading = (state) => state.transactions.loading;
+export default transactionsSlice.reducer;
+```
+
+#### `src/store/slices/commoditiesSlice.js`
+
+```javascript
+import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
+import apiClient from "../../api/client";
+
+export const fetchCommodities = createAsyncThunk(
+    "commodities/fetch",
+    async (_, { rejectWithValue }) => {
+        try {
+            const res = await apiClient.get("/member/commodities");
+            return res.data.data;
+        } catch (err) {
+            return rejectWithValue(err.response?.data);
+        }
+    },
+);
+
+export const fetchCommodityDetail = createAsyncThunk(
+    "commodities/detail",
+    async (id, { rejectWithValue }) => {
+        try {
+            const res = await apiClient.get(`/member/commodities/${id}`);
+            return res.data.data;
+        } catch (err) {
+            return rejectWithValue(err.response?.data);
+        }
+    },
+);
+
+export const subscribeCommodity = createAsyncThunk(
+    "commodities/subscribe",
+    async ({ commodityId, ...data }, { rejectWithValue }) => {
+        try {
+            const res = await apiClient.post(
+                `/member/commodities/${commodityId}/subscribe`,
+                data,
+            );
+            return res.data;
+        } catch (err) {
+            return rejectWithValue(err.response?.data);
+        }
+    },
+);
+
+export const fetchSubscriptions = createAsyncThunk(
+    "commodities/subscriptions",
+    async (_, { rejectWithValue }) => {
+        try {
+            const res = await apiClient.get("/member/commodity-subscriptions");
+            return res.data.data;
+        } catch (err) {
+            return rejectWithValue(err.response?.data);
+        }
+    },
+);
+
+export const fetchSubscriptionDetail = createAsyncThunk(
+    "commodities/subscriptionDetail",
+    async (id, { rejectWithValue }) => {
+        try {
+            const res = await apiClient.get(
+                `/member/commodity-subscriptions/${id}`,
+            );
+            return res.data.data;
+        } catch (err) {
+            return rejectWithValue(err.response?.data);
+        }
+    },
+);
+
+export const makePayment = createAsyncThunk(
+    "commodities/pay",
+    async ({ subscriptionId, ...data }, { rejectWithValue }) => {
+        try {
+            const res = await apiClient.post(
+                `/member/commodity-subscriptions/${subscriptionId}/payments`,
+                data,
+            );
+            return res.data;
+        } catch (err) {
+            return rejectWithValue(err.response?.data);
+        }
+    },
+);
+
+const commoditiesSlice = createSlice({
+    name: "commodities",
+    initialState: {
+        list: null,
+        detail: null,
+        subscriptions: null,
+        subscriptionDetail: null,
+        loading: false,
+    },
+    reducers: {},
+    extraReducers: (builder) => {
+        builder
+            .addCase(fetchCommodities.pending, (state) => {
+                state.loading = true;
+            })
+            .addCase(fetchCommodities.fulfilled, (state, action) => {
+                state.loading = false;
+                state.list = action.payload;
+            })
+            .addCase(fetchCommodities.rejected, (state) => {
+                state.loading = false;
+            })
+            .addCase(fetchCommodityDetail.fulfilled, (state, action) => {
+                state.detail = action.payload;
+            })
+            .addCase(fetchSubscriptions.fulfilled, (state, action) => {
+                state.subscriptions = action.payload;
+            })
+            .addCase(fetchSubscriptionDetail.fulfilled, (state, action) => {
+                state.subscriptionDetail = action.payload;
+            });
+    },
+});
+
+export const selectCommodities = (state) => state.commodities.list;
+export const selectCommodityDetail = (state) => state.commodities.detail;
+export const selectSubscriptions = (state) => state.commodities.subscriptions;
+export const selectSubscriptionDetail = (state) =>
+    state.commodities.subscriptionDetail;
+export const selectCommoditiesLoading = (state) => state.commodities.loading;
+export default commoditiesSlice.reducer;
+```
+
+#### `src/store/slices/notificationsSlice.js`
+
+```javascript
+import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
+import apiClient from "../../api/client";
+
+export const fetchNotifications = createAsyncThunk(
+    "notifications/fetch",
+    async (_, { rejectWithValue }) => {
+        try {
+            const res = await apiClient.get("/member/notifications");
+            return res.data.data;
+        } catch (err) {
+            return rejectWithValue(err.response?.data);
+        }
+    },
+);
+
+export const markRead = createAsyncThunk(
+    "notifications/markRead",
+    async (id, { rejectWithValue }) => {
+        try {
+            await apiClient.post(`/member/notifications/${id}/read`);
+            return id;
+        } catch (err) {
+            return rejectWithValue(err.response?.data);
+        }
+    },
+);
+
+export const markAllRead = createAsyncThunk(
+    "notifications/markAllRead",
+    async (_, { rejectWithValue }) => {
+        try {
+            await apiClient.post("/member/notifications/read-all");
+            return true;
+        } catch (err) {
+            return rejectWithValue(err.response?.data);
+        }
+    },
+);
+
+const notificationsSlice = createSlice({
+    name: "notifications",
+    initialState: { data: null, loading: false },
+    reducers: {},
+    extraReducers: (builder) => {
+        builder
+            .addCase(fetchNotifications.pending, (state) => {
+                state.loading = true;
+            })
+            .addCase(fetchNotifications.fulfilled, (state, action) => {
+                state.loading = false;
+                state.data = action.payload;
+            })
+            .addCase(fetchNotifications.rejected, (state) => {
+                state.loading = false;
+            })
+            .addCase(markRead.fulfilled, (state, action) => {
+                // Optimistically update the notification
+                const items = state.data?.data;
+                if (items) {
+                    const item = items.find((n) => n.id === action.payload);
+                    if (item) item.read_at = new Date().toISOString();
+                }
+            })
+            .addCase(markAllRead.fulfilled, (state) => {
+                const items = state.data?.data;
+                if (items) {
+                    items.forEach((n) => {
+                        n.read_at = n.read_at || new Date().toISOString();
+                    });
+                }
+            });
+    },
+});
+
+export const selectNotifications = (state) => state.notifications.data;
+export const selectNotificationsLoading = (state) =>
+    state.notifications.loading;
+export const selectUnreadCount = (state) => {
+    const items = state.notifications.data?.data;
+    return items ? items.filter((n) => !n.read_at).length : 0;
+};
+export default notificationsSlice.reducer;
+```
+
+#### `src/store/slices/financialSlice.js`
+
+```javascript
+import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
+import apiClient from "../../api/client";
+
+export const fetchFinancialSummary = createAsyncThunk(
+    "financial/fetch",
+    async (year, { rejectWithValue }) => {
+        try {
+            const res = await apiClient.get("/member/financial-summary", {
+                params: { year },
+            });
+            return res.data.data;
+        } catch (err) {
+            return rejectWithValue(err.response?.data);
+        }
+    },
+);
+
+const financialSlice = createSlice({
+    name: "financial",
+    initialState: { data: null, loading: false },
+    reducers: {},
+    extraReducers: (builder) => {
+        builder
+            .addCase(fetchFinancialSummary.pending, (state) => {
+                state.loading = true;
+            })
+            .addCase(fetchFinancialSummary.fulfilled, (state, action) => {
+                state.loading = false;
+                state.data = action.payload;
+            })
+            .addCase(fetchFinancialSummary.rejected, (state) => {
+                state.loading = false;
+            });
+    },
+});
+
+export const selectFinancialData = (state) => state.financial.data;
+export const selectFinancialLoading = (state) => state.financial.loading;
+export default financialSlice.reducer;
+```
+
+#### Updated `src/store/index.js` (add all member slices)
+
+```javascript
+import { configureStore, combineReducers } from "@reduxjs/toolkit";
+import {
+    persistStore,
+    persistReducer,
+    FLUSH,
+    REHYDRATE,
+    PAUSE,
+    PERSIST,
+    PURGE,
+    REGISTER,
+} from "redux-persist";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+
+import authReducer from "./slices/authSlice";
+import lookupReducer from "./slices/lookupSlice";
+import dashboardReducer from "./slices/dashboardSlice";
+import savingsReducer from "./slices/savingsSlice";
+import sharesReducer from "./slices/sharesSlice";
+import loansReducer from "./slices/loansSlice";
+import withdrawalsReducer from "./slices/withdrawalsSlice";
+import transactionsReducer from "./slices/transactionsSlice";
+import commoditiesReducer from "./slices/commoditiesSlice";
+import notificationsReducer from "./slices/notificationsSlice";
+import financialReducer from "./slices/financialSlice";
+
+const persistConfig = {
+    key: "root",
+    storage: AsyncStorage,
+    whitelist: ["auth"], // only persist auth (token, user, role)
+};
+
+const rootReducer = combineReducers({
+    auth: authReducer,
+    lookup: lookupReducer,
+    dashboard: dashboardReducer,
+    savings: savingsReducer,
+    shares: sharesReducer,
+    loans: loansReducer,
+    withdrawals: withdrawalsReducer,
+    transactions: transactionsReducer,
+    commodities: commoditiesReducer,
+    notifications: notificationsReducer,
+    financial: financialReducer,
+});
+
+const persistedReducer = persistReducer(persistConfig, rootReducer);
+
+export const store = configureStore({
+    reducer: persistedReducer,
+    middleware: (getDefaultMiddleware) =>
+        getDefaultMiddleware({
+            serializableCheck: {
+                ignoredActions: [
+                    FLUSH,
+                    REHYDRATE,
+                    PAUSE,
+                    PERSIST,
+                    PURGE,
+                    REGISTER,
+                ],
+            },
+        }),
+});
+
+export const persistor = persistStore(store);
+```
+
+> **Interview note:** Only `auth` is in the persist whitelist. Member module data (savings, loans, etc.) is fetched fresh on each screen mount, keeping the app data always current without stale cache issues.
+
+### Screen Implementation Pattern (copy this for each module)
+
+```javascript
+// Example: src/screens/member/SavingsScreen.js
+import React, { useEffect, useCallback } from "react";
+import { View, Text, FlatList, RefreshControl, StyleSheet } from "react-native";
+import { useDispatch, useSelector } from "react-redux";
+import {
+    fetchSavings,
+    selectSavingsData,
+    selectSavingsLoading,
+} from "../../store/slices/savingsSlice";
+import Card from "../../components/Card";
+import LoadingSpinner from "../../components/LoadingSpinner";
+import EmptyState from "../../components/EmptyState";
+import { COLORS } from "../../utils/theme";
+import { formatCurrency } from "../../utils/formatters";
+
+export default function SavingsScreen({ navigation }) {
+    const dispatch = useDispatch();
+    const data = useSelector(selectSavingsData);
+    const loading = useSelector(selectSavingsLoading);
+
+    const loadData = useCallback(() => {
+        dispatch(fetchSavings());
+    }, [dispatch]);
+
+    useEffect(() => {
+        loadData();
+    }, [loadData]);
+
+    if (!data && loading) return <LoadingSpinner />;
+
+    return (
+        <View style={styles.container}>
+            {/* Summary Cards */}
+            <View style={styles.cardsRow}>
+                {data?.type_balances?.map((type) => (
+                    <Card key={type.id} style={styles.card}>
+                        <Text style={styles.cardLabel}>{type.name}</Text>
+                        <Text style={styles.cardValue}>
+                            {formatCurrency(type.amount)}
+                        </Text>
+                    </Card>
+                ))}
+                <Card style={styles.card}>
+                    <Text style={styles.cardLabel}>Savings Balance</Text>
+                    <Text style={[styles.cardValue, { color: COLORS.success }]}>
+                        {formatCurrency(data?.savings_balance)}
+                    </Text>
+                </Card>
+            </View>
+
+            {/* Savings List */}
+            <FlatList
+                data={data?.recent_savings?.data || []}
+                keyExtractor={(item) => item.id.toString()}
+                refreshControl={
+                    <RefreshControl
+                        refreshing={loading}
+                        onRefresh={loadData}
+                        colors={[COLORS.primary]}
+                    />
+                }
+                ListEmptyComponent={
+                    <EmptyState message="No savings records yet" />
+                }
+                renderItem={({ item }) => (
+                    <View style={styles.row}>
+                        <View>
+                            <Text style={styles.rowTitle}>
+                                {item.saving_type?.name}
+                            </Text>
+                            <Text style={styles.rowDate}>
+                                {new Date(item.created_at).toLocaleDateString()}
+                            </Text>
+                        </View>
+                        <Text style={styles.rowAmount}>
+                            {formatCurrency(item.amount)}
+                        </Text>
+                    </View>
+                )}
+            />
+        </View>
+    );
+}
+
+const styles = StyleSheet.create({
+    container: { flex: 1, backgroundColor: COLORS.background, padding: 16 },
+    cardsRow: {
+        flexDirection: "row",
+        flexWrap: "wrap",
+        gap: 12,
+        marginBottom: 16,
+    },
+    card: { flex: 1, minWidth: "45%", padding: 16 },
+    cardLabel: { fontSize: 13, color: COLORS.gray500 },
+    cardValue: {
+        fontSize: 22,
+        fontWeight: "bold",
+        color: COLORS.primary,
+        marginTop: 4,
+    },
+    row: {
+        flexDirection: "row",
+        justifyContent: "space-between",
+        alignItems: "center",
+        backgroundColor: COLORS.white,
+        padding: 16,
+        borderRadius: 8,
+        marginBottom: 8,
+    },
+    rowTitle: { fontSize: 15, fontWeight: "600", color: COLORS.gray700 },
+    rowDate: { fontSize: 12, color: COLORS.gray500, marginTop: 2 },
+    rowAmount: { fontSize: 16, fontWeight: "bold", color: COLORS.primary },
+});
+```
+
+> **Pattern replicated for every module screen:**
+>
+> 1. `useEffect` → `dispatch(fetchXxx())` on mount
+> 2. `useSelector` → read data + loading
+> 3. `RefreshControl` → pull-to-refresh
+> 4. `LoadingSpinner` / `EmptyState` for empty/loading states
+> 5. Navigation to detail screens via `navigation.navigate("LoanDetail", { id })`
+
+### Endpoint → Screen → Slice Mapping (complete reference)
+
+| API Endpoint                                         | Screen File                       | Slice                | Thunk                        |
+| ---------------------------------------------------- | --------------------------------- | -------------------- | ---------------------------- |
+| `GET /member/dashboard`                              | `DashboardScreen.js`              | `dashboardSlice`     | `fetchDashboard`             |
+| `GET /member/savings`                                | `SavingsScreen.js`                | `savingsSlice`       | `fetchSavings`               |
+| `GET /member/savings/monthly-summary`                | `SavingsMonthlySummaryScreen.js`  | `savingsSlice`       | `fetchSavingsMonthlySummary` |
+| `GET /member/savings-settings`                       | `SavingsSettingsScreen.js`        | `savingsSlice`       | `fetchSavingsSettings`       |
+| `POST /member/savings-settings`                      | `SavingsSettingsScreen.js`        | `savingsSlice`       | `createSavingsSetting`       |
+| `GET /member/shares`                                 | `SharesScreen.js`                 | `sharesSlice`        | `fetchShares`                |
+| `POST /member/shares`                                | `SharesScreen.js`                 | `sharesSlice`        | `purchaseShare`              |
+| `GET /member/loans`                                  | `LoansScreen.js`                  | `loansSlice`         | `fetchLoans`                 |
+| `GET /member/loans/{id}`                             | `LoanDetailScreen.js`             | `loansSlice`         | `fetchLoanDetail`            |
+| `POST /member/loans`                                 | `LoanApplyScreen.js`              | `loansSlice`         | `applyForLoan`               |
+| `POST /member/loan-calculator`                       | `LoanCalculatorScreen.js`         | `loansSlice`         | `calculateLoan`              |
+| `GET /member/members?search=`                        | `LoanApplyScreen.js`              | `loansSlice`         | `searchMembers`              |
+| `GET /member/guarantor-requests`                     | `GuarantorRequestsScreen.js`      | `loansSlice`         | `fetchGuarantorRequests`     |
+| `POST /member/guarantor-requests/{id}/respond`       | `GuarantorRequestsScreen.js`      | `loansSlice`         | `respondGuarantor`           |
+| `GET /member/withdrawals`                            | `WithdrawalsScreen.js`            | `withdrawalsSlice`   | `fetchWithdrawals`           |
+| `POST /member/withdrawals`                           | `WithdrawalsScreen.js`            | `withdrawalsSlice`   | `requestWithdrawal`          |
+| `GET /member/transactions`                           | `PassbookScreen.js`               | `transactionsSlice`  | `fetchTransactions`          |
+| `GET /member/transactions/{id}`                      | `TransactionDetailScreen.js`      | `transactionsSlice`  | `fetchTransactionDetail`     |
+| `GET /member/commodities`                            | `CommoditiesScreen.js`            | `commoditiesSlice`   | `fetchCommodities`           |
+| `GET /member/commodities/{id}`                       | `CommodityDetailScreen.js`        | `commoditiesSlice`   | `fetchCommodityDetail`       |
+| `POST /member/commodities/{id}/subscribe`            | `CommodityDetailScreen.js`        | `commoditiesSlice`   | `subscribeCommodity`         |
+| `GET /member/commodity-subscriptions`                | `CommoditySubscriptionsScreen.js` | `commoditiesSlice`   | `fetchSubscriptions`         |
+| `GET /member/commodity-subscriptions/{id}`           | `CommoditySubscriptionsScreen.js` | `commoditiesSlice`   | `fetchSubscriptionDetail`    |
+| `POST /member/commodity-subscriptions/{id}/payments` | `CommoditySubscriptionsScreen.js` | `commoditiesSlice`   | `makePayment`                |
+| `GET /member/notifications`                          | `NotificationsScreen.js`          | `notificationsSlice` | `fetchNotifications`         |
+| `POST /member/notifications/{id}/read`               | `NotificationsScreen.js`          | `notificationsSlice` | `markRead`                   |
+| `POST /member/notifications/read-all`                | `NotificationsScreen.js`          | `notificationsSlice` | `markAllRead`                |
+| `GET /member/financial-summary`                      | `FinancialSummaryScreen.js`       | `financialSlice`     | `fetchFinancialSummary`      |
+| `PUT /member/profile`                                | `ProfileScreen.js`                | `authSlice`          | `fetchProfile` (after save)  |
+| `GET /member/resources`                              | `ResourcesScreen.js`              | _(inline fetch)_     | _(simple useEffect)_         |
+
 ---
 
 ## Testing the API
@@ -1514,24 +3385,26 @@ Laravel's default API rate limiter applies: **60 requests per minute** per user/
 
 ## Files Created / Modified
 
-| File                                             | Action                     | Purpose                                                      |
-| ------------------------------------------------ | -------------------------- | ------------------------------------------------------------ |
-| `app/Http/Controllers/Api/V1/AuthController.php` | **Created**                | API auth: login, register, logout, profile, password, lookup |
-| `routes/api.php`                                 | **Modified**               | API v1 routes (public + protected)                           |
-| `bootstrap/app.php`                              | **Modified**               | Registered `api.php` routing + `ability` middleware alias    |
-| `config/auth.php`                                | **Modified**               | Added `sanctum` guard                                        |
-| `app/Models/User.php`                            | **Modified**               | Added `HasApiTokens` trait                                   |
-| `composer.json`                                  | **Modified** (by composer) | Added `laravel/sanctum` dependency                           |
-| `docs/API.md`                                    | **Created**                | This documentation                                           |
+| File                                               | Action                     | Purpose                                                      |
+| -------------------------------------------------- | -------------------------- | ------------------------------------------------------------ |
+| `app/Http/Controllers/Api/V1/AuthController.php`   | **Created**                | API auth: login, register, logout, profile, password, lookup |
+| `routes/api.php`                                   | **Modified**               | API v1 routes (public + protected + 35 member routes)        |
+| `bootstrap/app.php`                                | **Modified**               | Registered `api.php` routing + `ability` middleware alias    |
+| `config/auth.php`                                  | **Modified**               | Added `sanctum` guard                                        |
+| `app/Models/User.php`                              | **Modified**               | Added `HasApiTokens` trait                                   |
+| `app/Http/Controllers/Api/V1/MemberController.php` | **Created**                | All member API endpoints (dashboard, savings, loans, etc.)   |
+| `composer.json`                                    | **Modified** (by composer) | Added `laravel/sanctum` dependency                           |
+| `docs/API.md`                                      | **Created**                | This documentation                                           |
 
 ---
 
 ## What's Next?
 
-1. **Phase 2 – Member Endpoints:** Dashboard stats, savings CRUD, shares, loans, passbook, withdrawals, commodities, guarantor flow, notifications (each module gets its own Redux slice)
-2. **Phase 3 – Admin Endpoints:** Member management, financial CRUD, reports, role management
-3. **Phase 4 – Push Notifications:** Expo Push Notifications + Firebase Cloud Messaging
-4. **Phase 5 – File Downloads:** PDF generation for passbook, financial summaries
+1. ~~**Phase 1 – Auth Endpoints:** Login, register, logout, profile, password reset~~ ✅ Done
+2. ~~**Phase 2 – Member Endpoints:** Dashboard, savings, shares, loans, passbook, withdrawals, commodities, guarantor, notifications, financial summary, profile, resources~~ ✅ Done (35 routes)
+3. **Phase 3 – Admin Endpoints:** Member management, financial CRUD, reports, role management
+4. **Phase 4 – Push Notifications:** Expo Push Notifications + Firebase Cloud Messaging
+5. **Phase 5 – File Downloads:** PDF generation for passbook, financial summaries
 
 ---
 
