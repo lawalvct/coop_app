@@ -64,8 +64,9 @@ class MemberController extends Controller
 
     public function approve(User $member)
     {
+
         $new_member_no =TransactionHelper::generateUniqueMemberNo();
-        dd($new_member_no);
+       
         $member->update([
             'admin_sign' => 'Yes',
             'member_no' => $new_member_no,
